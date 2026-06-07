@@ -2,9 +2,8 @@
 VariousProjects I guess  
 
 To do list:  
-
-- Consistent models
-- Adding Transformers to diffusion
+ 
+- **Adding Transformers to diffusion**
 - Transformers only code
 - escape the black box torch.cuda.amp.GradScaler(), torch.compiler()
 - Doing 1 model of flow map for each technique (distillation, self distillation/from scratch, marginal-from-conditional learning)
