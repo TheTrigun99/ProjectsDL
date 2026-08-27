@@ -1,0 +1,1238 @@
+Removing Reflections from RA W Photos
+Supplementary Material
+Contents
+Supplemental sections
+Section A. Photometric reflection synthesis
+A.1. White balancing
+Section B. Geometric reflection synthesis
+B.1. Fresnel attenuation
+B.2. Camera projection
+B.3. Defocus blur
+B.4. HDR environment sampling
+B.5. Double reflection
+Section C. Contextual photos
+Section D. Data collection
+D.1. Mixture search
+D.2. Image collection
+D.3. Dataset settings
+Section E. Reflection removal methods
+E.1. Base model architecture
+E.2. Upsampler architecture
+Section F. Results
+F.1. Evaluation methodology
+F.2. Base model comparisons
+F.3. Upsampler comparisons
+F.4. Editing applications
+Section G. Adobe Camera RAW DNG SDK
+Supplemental figures
+Fig. S1. Examples of simulated geometric properties
+Fig. S2. Overview of the reflection dataset
+Fig. S3. Contextual camera geometry
+Fig. S4. Base model architecture
+Fig. S5. Upsampler architecture
+Fig. S6. Result comparisons with ground truth
+Fig. S7. Base model results in-the-wild
+Fig. S8. Base model results in-the-wild (continued)
+Fig. S9. Results on subtle reflections
+Fig. S10. Results for lens flare removal
+Fig. S11. Upsampler model comparison
+Fig. S14. Upsampler model failures
+Fig. S15. Reflection editing for error recovery
+Supplemental functions (simulation and DNG SDK)
+Func. S1. compute
+exposure()
+Func. S2. white balance()
+Func. S3. extract xyz images()
+Func. S4. cam to rgb()
+Func. S5. stage3 black level()
+Func. S6. highlight recovery()
+Func. S7. find xyz to cam()
+Func. S8. xyz to cam awb()
+Func. S9 - S17. Additional ACR functions
+A. Photometric reflection synthesis
+As part of our photometric reflection synthesis pipeline,
+Func. 1, we compute a new exposure and white balance for
+the simulated mixture image, m, using Func. S1 and Func.
+S2, respectively. These functions follow ACR color process-
+ing, and use methods in the Adobe DNG SDK, Sec. G. The
+ACR color processing that produces XYZ source images is
+specified in Func. S3 and discussed in Sec. G.
+A.1. White balancing
+To compute a new white balance within Func. S2, we use
+the C5 white balancer of Afifi et al. [2]. C5 white balances
+an input image by using an additional n sample images that
+were captured from the same camera. We therefore cache n
+samples for each camera in the dataset of RAW images, and
+remove all images for which there were not n = 7 samples
+from the camera (7 is the C5 default).
+White balancing with C5 requires that simulated mixtures
+m =t+r in XYZ be transformed into camera color space. In
+Func. S2 we use the XYZ
+to CAM transform associated with
+the RAW source image oft to simulate a camera from which
+the mixture was captured, since t typically dominates r in
+the sum due to attenuation by the glass (see Sec. B). The
+white balancer produces a new white point WhiteCAM awb
+in camera color space. We then follow ACR color process-
+ing of white points in camera color space by transforming
+WhiteCAM
+awb into XY coordinates and computing a new
+XYZ to CAM transform using DNG SDK Func. S7. This new
+transform into XYZ is then composed with Bradford adap-
+tation (Func. S2 line 5) to construct a single, linear white
+balancing transform that operates on images in XYZ space
+(line 6).
+Over a large scale dataset, white balancer failures in-
+Function S1 Compute the exposure of a simulated mixture m.
+Input: A simulated mixturem and its associated component images (t,r )
+Output: An exposure valuee
+1: Compute the WhiteXY oft. {SDK Func. S9}
+2: Compute transform XYZ to sRGB using WhiteXY. {SDK Func. S11}
+3: Convert m to linear sRGB using XYZ to sRGB.
+4: if no pixels int orr are saturated then
+5: Compute the mean pixel value µ ofm
+6: Compute the target value τ = sRGB to linear sRGB(0.4).{SDK
+Func. S17}
+7: return e =τ/µ {Expose the mean to sRGB 0.4.}
+8: else
+9: Convert t andr to linear sRGB using XYZ to sRGB.
+10: Compute tmax = max(t) andrmax = max(r ).
+11: return e = 1/ min(tmax,r max)
+12: end if
+Function S2 Compute the white balance transform.
+Input: A re-exposed XYZ mixture,e·m, and the transmissiont
+Output: XYZ to XYZ awb
+1: Compute the XYZ to CAM using the WhiteXY oft. {SDK Func. S7}
+2: Transform e·m into camera color space using XYZ to CAM.
+3: Compute a new white point WhiteCAM awb in camera color space.
+{This work uses [2]}
+4: Compute XYZ to CAM awb and WhiteXY awb from WhiteCAM awb.
+{Func. S10+S7 or S8}
+5: Compute XYZ to XYZ D50 from WhiteXY awb. {SDK Func. S13}
+6: return XYZ to XYZ D50 · inv(XYZ to CAM awb) · XYZ to CAM.
+evitably occur. These are handled by culling m if the new
+white point is extremely different from the as-shot WhiteXY
+oft. Extreme changes to the true white point are not com-
+mon because reflections that are of practical interest are ei-
+ther transparent, localized, or both. The new XY white point
+(WhiteXY
+awb) can be further restricted to lie on the Planck-
+ian locus, and we found this to be sufficient for our source
+images, which were captured under typical illuminants. Pro-
+jection from WhiteCAM
+awb to WhiteXY awb can be done
+using ACR Func. S10 and S7, or Func. S8 with the Planck-
+ian constraint, as noted in Func. S2, line 4.
+In summary, the white balance computed in Func. S2 is
+a linear transform, which we denote XYZ to XYZ awb, that
+composes three ACR color transforms: 1) it maps images
+into the camera color space oft, 2) it maps back to XYZ un-
+der a new white point, and 3) it applies Bradford adaptation
+to the D50 illuminant. In the simulation (Func. 1) this trans-
+form is applied tom,t,r, andc so they are interpreted with
+respect to the same white point, lines 8-9.
+B. Geometric reflection synthesis
+As part of our reflection removal pipeline, a geometric simu-
+lation is used to construct transmission and reflection pairs
+of images (t,r ) from a dataset of pairs of scene-referred
+(RAW) photographs (i,j )∈D that were not captured with
+or through glass. These transmission and reflection pairs are
+then added together to form the training data for our models,
+with ground truth provided by the constituent images in each
+pair. This simulation approach overcomes the scaling bottle-
+neck of capturing real reflection images for training, which
+is difficult because ground truth (without the glass present)
+is not readily available.
+In particular, we synthesize transmission imagest =T (i)
+and reflection images r =R(j) as functions of i andj that
+appropriately model Fresnel attenuation, perspective projec-
+tion, double reflection, and defocus blur. We omit from T
+effects related to global color, dirt, and scratches since ex-
+isting photo editing tools are well equipped to correct them
+after reflection removal. Examples are shown in Fig.S1, and
+an overview of the synthetic images is shown in Fig. S2.
+Oblique Fresnel Double Reflection Defocus Blur
+Figure S1. Simulated geometric properties at extreme values. Blurs
+are typically subtle.
+B.1. Fresnel attenuation
+Fresnel attenuation is the most essential property to simu-
+late because it reduces the intensity of the reflected image.
+Specifically, reflectionsr are attenuated by a spatially vary-
+ing factor α that depends on the angle of incidence θi at
+which light strikes the glass with respect to the surface nor-
+mal vector. As derived in [25],
+α = 1
+2(α⊥ +α∥) (1)
+α⊥ = sin2(θi−θ′
+i)
+sin2(θi +θ′
+i) (2)
+α∥ = tan2(θi−θ′
+i)
+tan2(θi +θ′
+i) , (3)
+whereθ′
+i = arcsin( 1
+κ sinθi), andκ is the refractive index of
+glass. Forθi∈ [0◦, 45◦], Fresnel attenuation accounts for up
+to−4 stops (underexposure), and gradually strengthens to
+−1 stop for rays that glancingly strike the glass at 83◦.
+To specifyθi, we define images r =R(j) as originating
+from a mirror surface, with incident rays reaching the camera
+by the law of reflection. In the next section we decribe how
+to simulate a diversity of practical geometric configurations
+of the glass and camera to construct θi and thus compute
+α. Glass also attenuates the transmissiont =T (i) by 1−α.
+This is typically close to 1, but at extreme angles it creates
+a visible darkening effect (Fig. S2, example 26). Typical
+attenuation levels are shown in Fig.S2 in the column labeled
+“reflection.”
+B.2. Camera projection
+We model consumer photography applications in which one
+sees a subject partially visible behind glass and takes a pic-
+ture of it. This constrains the relative pose of the camera and
+glass, and introduces natural priors on the location and ap-
+pearance of reflections. For example, skies typically reflect
+near the top of images, and reflections are typically stronger
+at the edges of photos where the camera rays strike the glass
+at a relatively higher angle of incidence,θi.
+Inclination angle ϕ. Most glass is approximately verti-
+cal, so if the viewpoint oft looks upward, the viewpoint ofr
+ContextReflectionTransmissionObservation
+ContextReflectionTransmissionObservation
+Oblique Fresnel Isolated Lights Interior Windows Defocus & Fresnel Defocus Blur Powerful Skies Florescent Colored Nearly Invisible Dark Interiors Interfering Texture Saturate-to-Black Lighting Color Var. Sparse Int. Lights
+Interiors at Dusk Percepually Difficult Multi. Color Lights Full Refl. Scenes Saturation Incadescent Ill. Bright Refl. Skies Interfering Texture Double Reflection Nearly Opaque Interiors at Dusk Matched Horizons Interior Windows
+26
+25
+24
+23
+22
+21
+20
+19
+18
+17
+16
+15
+14
+13
+12
+11
+10
+9
+8
+7
+6
+5
+4
+3
+2
+1
+Figure S2. Dataset overview (2048p). All images are simulations that use RA W sources.The numbers are referenced in the text.
+should as well. We use a pose estimator [18], and augment
+the search for realistic pairings (t,r ), Sec. 3.1, by checking
+ifϕt−ϕr = ∆ϕ is below a maximum absolute value. In ad-
+dition to this inclination discrepancy filter, images are culled
+if their inclination angle ϕ exceeds a threshold. This aligns
+the horizons of t and r, which introduces spatial priors, as
+illustrated in Fig. S2 examples 2, 5, 14, 20, and 24.
+Roll angle ρ. Images are culled if their estimated roll ρ
+exceeds a maximum absolute value as these typically indi-
+cate that the pose estimator has failed.
+Field of view. Images are also culled if the es-
+timated vertical FOV is zero, which indicates general
+pose estimation failures. Otherwise we randomly sample
+FOV∼U (FOVmin, FOVmax), whereU is the uniform dis-
+tribution.
+Azimuth angle θ. Most glass in consumer photogra-
+phy is roughly planar. We constrain the camera azimuth
+with respect to the glass so that the camera rays strike this
+plane (accounting for the FOV). We randomly sample θ∼
+U(−θmax,θ max). The effect of this constraint can be most
+easily seen in Fig. S2 where highly oblique camera angles
+create spatially varying Fresnel attenuation across the reflec-
+tion component (examples 6, 7, 14, 19, 23, and 26).
+B.3. Defocus blur
+Recently Lei [28] found that performance of state-of-the-art
+methods degrades significantly for sharp reflections due to
+an imbalance of blurry images in training and testing data.
+Physically based methods have been developed to introduce
+realistic defocus blur using depth maps [24], but this intro-
+duces a data collection bottleneck by requiring RGBD cam-
+eras that also have physical limitations. We instead model a
+physically based prior on the amount of defocus blur.
+Defocus blurs are determined by the camera focus depth,
+aperture, and focal length. Points on an object at depth do
+that differs from the focus depth df project to a circular re-
+gion with diameterδ,
+δ =|do−df|
+do
+f 2
+N(df−f) , (4)
+wheref is the focal length, and N is the aperture f-number.
+This circle of confusion [15] is magnified with increasing
+focal lengthf or decreasing N.
+Defocused images are simulated by sampling diametersδ
+(mm) for the circle of confusion. The focal length f (mm)
+and aperture N (dimensionless) are sampled according to
+their physical ranges in mobile cameras. The object and fo-
+cus depthsdo anddf (feet) are sampledd∼U (dmin,d max),
+in the plausible and finite range of scene depths to whichδ is
+sensitive. The diameter δ (mm) is converted to a percentage
+of the sensor height, δp (the minimum sensor dimension).
+Reflectionsr =R(j) are blurred by convolving them with a
+circular defocus kernel with pixel diameter hδp, where h is
+the minimum dimension of the image j in pixels. We main-
+tain this physical calibration when images are cropped into
+halves to simulate contextual views (Sec.3.3 and Section C).
+Our physically based sampling procedure simulates re-
+flections with a realistic amount of defocus blur for con-
+sumer photography. An example of a strongly blurred reflec-
+tion is shown in Fig.S1. We however find that reflections are
+typically sharp, as Lei [28] also notes. Typical defocus blurs
+are shown in Fig. S2; strong blurs are shown in examples 22
+and 23.
+B.4. HDR Environment sampling
+A dataset of indoor 360◦ HDR Image-Based-Lights (IBLs)
+are used as an additional source of scene-referred im-
+ages [14]. Artificial light sources in HDR images are typ-
+ically not saturated, which makes it possible to simulate re-
+flections of light sources that are not saturated (or, under-
+exposed RAW images could be used).
+When one of the images in a pair (i,j )∈D is an IBL, a
+synthetic camera is constructed with a pose that matches the
+RAW image to which it is paired (see Sec. B.2), excepting
+that the azimuth θ is sampled independently and uniformly
+at random in 360◦. Contextual images c are simulated by
+a second synthetic camera within the IBL with an adjacent,
+non-overlapping FOV .
+The IBLs [14] are captured under a fixed white point,
+which allows for the color of the illuminant (i.e., its white
+balance) to be mixed correctly with the RAW data. We cali-
+brate the exposure of these indoor IBLs by setting their me-
+dian intensity to match the median value of all indoor RAW
+images (the median contends with saturated pixels). This
+cropped HDR image can be photometrically combined, and
+geometrically transformed using functions T orR. The ef-
+fect of HDRs is shown in Fig. S2: reflected light sources,
+windows, etc. are produced by HDRs in examples 1, 2, 5, 6,
+11, 14, 20, 24, and 26.
+B.5. Double reflection
+Glass panes introduce multiple reflective surfaces that create
+a double reflection or “ghosting” effect. Shih et al. [39] as-
+cribe the effect of double reflection to the thickness of a sin-
+gle or double pane, and show shifts up to 4 pixels for thick-
+nesses in 3–10mm under some viewing distances, but double
+reflections are often much larger. Gaps between panes reach
+20mm as reported commercially, and each pane adds up to
+7mm. These multiple reflecting surfaces are also not neces-
+sarily parallel, uniformly thick, or flat as assumed in [39].
+These factors produce significant double reflections even in
+modern windows, including when the camera is distant. We
+simulate these complex effects by adopting the geometric
+model of [39] and allowing a greater range of thicknesses,
+8–20mm. We uniformly sample a glass thickness, physical
+viewing distance, and refractive index. These facilitate a ray
+tracing procedure, detailed below. Fig. S2 shows double re-
+flections in the dataset; see examples2, 4, 5, 7, 8, 12, 14, and
+15.
+The primary reflection that contributes to r =R(j) is
+determined by the Fresnel attenuation αj as described in
+Sec. B.1. Specifically, the intensity of light at each homo-
+geneous image coordinate x isα(x)j(x), because we have
+defined j(x) as encoding the light along the incident rays
+r with ∠(x, r) = 2 θi where θi is the angle of incidence.
+We simulate a second reflection by tracing the camera rays
+x through a simulated single pane of uniform thickness to
+identify the coordinates x′ at which they would emerge from
+the glass after being internally reflected from the back sur-
+face of the pane. Coordinates x′ are shifted according to
+their transit distance within the glass, which is determined
+by the law of reflection and Snell’s law. We neglect the lat-
+ter as insignificant in comparison to the former and the vari-
+ous non-modeled physical effects of real glass panes. Under
+these assumptions, rays that enter the glass at x emerge at x′
+in direction r. An image j′ is needed to describe the inten-
+sity of incident light in direction r at x′, butj′(x′)̸= j(x′)
+because we have defined j(x′) as describing the light re-
+flected from a corresponding direction r′. Since we do not
+havej′, we assume that the light field is sufficiently smooth
+thatj′(x′)≈j(x′), since ∠(r, r′) = ∠(x, x′) is small. We
+therefore warpj such that x′7→ x, and combine this warped
+imagejw withj to produce a double reflection image.
+The double reflection image is given by jd = αj +βjw,
+whereα is the known Fresnel attenuation due to the primary
+reflection (see Sec. B.1), and β specifies the attenuation of
+the rays that travel into the glass before they are internally re-
+flected back to the camera. These latter rays encounter three
+surfaces, and lose intensity at each one. The first surface is
+the front face of the glass, where they are mildly attenuated
+by 1−α as they transmit into the glass. Second is the back
+face, where they reflect and are attenuated again according
+to their angle of incidence, which has been altered by Snell’s
+law. This change of incidence angle however has a negligible
+effect on the the Fresnel attenuation factor within the typical
+incidence ranges. We therefore useα as the attenuation at the
+second surface. Lastly, the rays re-encounter the front face
+of the glass (now from within) where they transmit out of the
+glass and are attenuated again by approximately 1−α. This
+givesβ = (1−α)α(1−α).
+Fig. S1 shows an example of a simulated double reflec-
+tion, selected to show a case when the primary and secondary
+reflections are significantly shifted. We note that no dou-
+bling effect can occur along the direction of the glass surface
+normal because the rays that enter the glass re-emerge af-
+ter internal reflection at the same location they entered. Thus
+double reflection fields that follow our geometric model (and
+the model of [39]), in which there are two perfectly parallel
+planes, must exhibit a radial pattern around the image of the
+glass surface normal. These patterns are not always apparent
+in practice, which suggests that the geometrical arrangement
+of glass surfaces that is described by Shih [39] omits impor-
+tant factors. We nonetheless adopt their model as being suf-
+ficient because visible reflections are typically localized to
+regions of an image, which obscures the presence or absence
+of a radial center.
+C. The contextual photo
+One arrangement of a primary and a contextual camera is
+shown in Fig. S3 (see caption for explanation). This spe-
+cific arrangement of cameras is neither required nor typical
+in practice, but it reveals general geometric differences be-
+tween the views of primary and contextual cameras. The
+view of the so-called reflection camera is translated by 2d,
+twice the distanced to the glass. Furthermore, if the contex-
+tual camera is rotated 180◦ from the primary, the latter view
+will be in an opposite direction. At extreme rotations, the
+views will have little or no overlap.
+Because the translation and rotation of the contextual
+camera view can differ significantly from the primary cam-
+era, it is difficult to simulate a contextual view using a dataset
+of image pairst =T (i) andr =R(j) that are used to create
+mixture imagesm from the perspective of a primary camera.
+In particular, content fromj should not be copied into a sim-
+ulated contextual image c, as trained models could learn to
+cheat by searching for patches of r that have the same per-
+spective projection inc. Such patches will not be present in
+practice.
+We create a scalably large dataset of contextual images c
+by noting thatc will often contain no common content withr
+unless the photographer is asked to point the camera at what
+they see in the reflection. We minimize such burden on the
+photographer, and define the contextual image c as any im-
+age of the reflection scene that does not view the same parts
+of the scene as r. This definition allows contextual images
+to capture lighting information (sunlight, incandescent, etc.)
+and scene semantics (outdoor, indoor, city, nature, etc.) to
+aid reflection removal.
+To constructc, we crop reflection source images, j, into
+non-overlapping left/right or top/bottom squares(j0,j 1), and
+similarly for transmission source images i. This yields four
+pairs for simulation (ia,jb) : (a,b)∈{0, 1}2 for all (i,j )∈
+D. The mixture and context images are (mab,c 1−b), where
+mab =C(T (ia) +R(jb)), and c1−b =C(j1−b). We fix the
+capture functionC for bothm andc to have the same white
+balance soc can describe the color of the reflection scene in
+addition to its semantics. Fig. S2 shows example contextual
+photos.
+Contextual Camera
+Reflection (Virtual) Camera
+Contextual Camera
+d
+d
+Visible
+in Both
+Photos
+Object
+Only 
+Visible in
+Reflection
+Not
+Visible in
+Reflection
+Visible in 
+Context photo
+Visible in 
+Reflection
+Centers of
+Projection
+Real
+Virtual
+Glass
+Figure S3. The geometry of a primary and contextual camera view.
+In this figure the two views are co-located (black dot), and the lat-
+ter is rotated 180 ◦ with respect to the former. Neither condition is
+required or typical; they are shown to illustrate one possible geo-
+metric arrangement. The contextual camera frustum is shown at the
+bottom (⊥ symbol); the primary camera frustum is not drawn. The
+reflection contains the scenery that would be captured by a virtual
+camera behind the glass (open circle, dashed⊥), equidistant to the
+glass wrt the primary camera, and swung azimuthally in the oppo-
+site direction. Note, the object (green circle) appears at the right
+edge of the contextual camera’s image (small green circle above it),
+but slightly left of center in the virtual camera view (small green
+circle near top of figure), and hence it is slightly right of center in
+the captured primary photo because the virtual camera is flipped
+left/right.
+D. Data collection
+Below are the data search and collection methods summa-
+rized in Sec. 3.1.
+D.1. Mixture search
+Well-exposed mixtures m are identified by checking if the
+mean pixel value is within a normal distribution over the
+pixel values in the dataset of RAW images.
+Well mixedm are identified by computing the SSIM be-
+tween m and t as a block-wise image, and checking if the
+mean of this SSIM image is within a useful range: if the
+SSIM is too high, the reflection is imperceptible; if it is
+too low, the mixture is not visually interpretable, even by
+a human. We compute this single channel SSIM image as
+a weighted average of the corresponding per-channel SSIM
+images. The weights are the average value in each color
+channel, which better accounts for strongly colored images.
+Lastly, the standard deviation of this single channel SSIM
+image is checked to remove reflections that are impercepti-
+ble, but nonetheless produce a low mean SSIM by spreading
+their power broadly (they have low spatial variance). The
+effect of this search can be seen in Fig. S2: simulated reflec-
+tions can be faint or nearly invisible (examples 19, 22, 23,
+and 25); or so strong that the transmission is nearly invisible
+or slightly difficult interpret (examples 4, 12, 16, and 21).
+D.2. Source images
+We collect all images at their native RAW camera resolution
+to facilitate training upsampling methods. We label all im-
+ages, including IBLs (Sec. B.4), as outdoor O and indoor
+I since glass typically separates indoor and outdoor spaces.
+This information is available in existing datasets [8, 10, 14],
+and can be collected at large scales via crowd-sourcing.
+We define our dataset D of pairs (i,j ) for simulation as
+D = (O×I )∪ (I×O )∪ (I×I )−P , where P is all
+pairsi =j. The setO×O is uncommon, and should be in-
+cluded sparingly following empirical priors. We omit them.
+These pairings of source images interact with the mix-
+ture search process (Sec. D.1) to introduce photometric and
+semantic priors, as seen in Fig. S2. Outdoor transmission
+scenes typically have reflections of indoor light sources or
+windows (examples 1, 2, 5, 9, 11, 14, 19, 24) unless it is
+dusk (example 3). Indoor transmission scenes typically have
+strong reflections of skies or full outdoor scenes due to the
+brightness of natural light (examples 4, 7, 8, 10, 12, 15, 16,
+17, 18, 21) unless it is dusk (example 13). Lastly, indoor-
+indoor pairings are often complex because t andr are typi-
+cally similar in brightness (examples 6, 20, 26).
+D.3. Simulation settings
+Twocapture scenariosare generated for each pair(i,j )∈D .
+A virtual camera is posed randomly with maximum azimuth
+θmax = 50◦ toward the glass and FOV∼U (50◦, 80◦),
+whereU denotes the uniform distribution. Pairs (i,j ) are
+culled if |∆ϕ| > 15◦, or either image has absolute incli-
+nation value|ϕ| > 45◦ or roll |ρ| > 10◦ (see Sec. B.2).
+Lastly, capture scenarios are also culled if the camera rays
+from more than 4 pixels do not strike the glass (they are par-
+allel or divergent). This final check ensures that the glass fills
+the FOV .
+We compute spatially varying Fresnel attenuation with
+index of refraction κ∼U (1.47, 1.53) [45]; see Sec. B.1.
+Double reflections are simulated with glass thickness (mm)
+inU(8, 20) at distances (mm) in U(500, 2000), with 50%
+probability of being a double pane; see Sec. B.5. Defo-
+cus blur is simulated with object and focus distances (ft)
+inU(1, 100) with aperture and focal length of iPhone main
+Mixture
+4p
+64c
+8p
+64c
+16p
+64c
+256p
+64c
+F-Net
+...
+16p
+64c
+256p
+32c
+P-Net
+...
+4p
+64c
+8p
+64c
+16p
+64c
+256p
+64c
+F-Net
+......
+16p
+64c
+256p
+32c
+P-Net
+......
+ContextMod. Merge
+Mod. Merge
+Mod. Merge
+Finishc
+Aff. Mod
+Up Mod
+Affine Pred.
+tran refl
+Mod. MergeF-Net
+Level K
+Mod. Level K-1
+Mod. Level K+1 Affines
+a
+bAff. Mod
+Up Mod
+FPN Comb.
+Mix. Feats.
+Affines
+Context Feats.
+Affine Pred.
+Linear Linear
+Paired-Channel MLP
+c
+Figure S4. The base model. Mixture and context images are projected into a high dimensional space using a shared backbone [43]
+(labeled P-Net; weights are shared), and a feature fusion network [44] (labeled F-Net; weights are shared). The context features are used
+to predict affine transforms for each feature channel at each resolution. Channel-wise modulation is used because contextual photos do
+not always include content that can be matched. Modulation can help identify the reflection in the feature space. We use two conv-mod-
+deconv operations of [23] within the modulated merge blocks. The FPN combine op is a fast normalized fusion module from the BiFPN
+architecture [44].
+cameras,N≈ 1.6 andf≈ 26mm (35mm equivalent units);
+see Sec. B.3. Simulated mixtures are culled if the mean
+SSIM between m andt falls outside of [0.4, 0.94], or if the
+standard deviation of this SSIM is below 0.05; see Sec. D.1.
+E. Reflection removal
+Here we provide details of the base model architecture, as
+summarized in Sec. 4.1, and the upsampler, Sec. 4.2.
+E.1. Base model
+The base model is designed to leverage local and global fea-
+tures, Fig. S4, and produce 2562 pixel outputs in about 1
+second on a mobile device to meet req. 4 (see Sec. 1).
+A feature backbone [43] is used to project m into a lin-
+ear, high dimensional space (32-D) and compute semantic
+features (labeled P-Net). Features are at a variety of spa-
+tial and channel resolutions: (256, 32), (256, 16), (128, 24),
+(64, 40), (32, 112). These features include the outputs of the
+initial convolution layer of the EfficientNet-B1 variant
+of [43] (as implemented by [54]), which we modify to use an
+initial stride of 1 rather than 2 so no initial down-sampling is
+performed on the input 256× 256 pixel images.
+The multi-resolution feature tensors from the backbone
+are next fused into 64 channels at the input resolution us-
+ing the D0 variant of the EfficientDet feature pyramid ar-
+chitecture [44, 54] (labeled F-Net). This architecture first
+augments the input features with three additional levels:
+(16, 64), (8, 64), (4, 64), where each results from a 2× 2
+maxpool with stride 2, and the first is preceded by a 1× 1
+conv, batch norm, and no activation. The augmented input
+features are then input to a series of so-called BiFPN lay-
+ers [44] (see Fig. 3), which fuse features from low resolution
+to high, and then back to low resolution, in a zigzag opera-
+tion that is repeated three times. To obtain high resolution
+fused features at only the input resolution of 256p, we add a
+fourth repetition in which we omit the final high-to-low pass.
+We furthermore modify the low-to-high pass to incorporate
+the contextual image, as described next.
+The contextual image, c, is passed through the same F-
+Net and P-Net using the same weights asm. The features of
+c andm at the lowest resolution are input to an affine predic-
+tion module, Fig. S4 (lower right). This module first vector-
+izes its two64×4×4 inputs, and passes them through a fully
+connected layer to transform them into two 64-D vectors.
+These vectors embody 64 pairs of channels, which we con-
+catenate and input to an MLP (labeled paired-channel MLP)
+that predicts affine transforms that modify the features of the
+FPN during the final low-to-high pass.
+The paired-channel MLP is a series of grouped convolu-
+tions that implement 64 independent MLPs followed by a
+fully connected layer. These 64 MLPs each have 2 inputs, 2
+hidden, and 1 output dimension, with leaky ReLUs after each
+layer. The inputs to these MLPs are corresponding pairs of
+channels from m andc. The outputs compose a single 64-
+D vector that is input to a fully connected layer to predict
+64×K× 2 affine transforms, two for each of the 64×K
+channels and levels of the FPN. 7 Conceptually, this paired-
+channel MLP has the capacity to comparec andm to identify
+channels that match the reflection scene, and to determine
+7Note that we include two levels at 2562 pixels, in correspondence with
+the resolutions of the features that we extract from the backbone.
+how to transform those channels to remove reflections.
+The predicted affines from the paired-channel MLP are
+used in the final low-to-high pass of the FPN to perform a
+series of modulated merge operations, Fig. S4 (upper right).
+These merge operations use two affine transforms per feature
+channel, labeled a andb in Fig. S4. Transforms a are used
+to perform a conv-mod-deconv operation ala StyleGan [23]
+on the features of m from FPN level K. These features are
+subsequently combined with the features from level K + 1
+by resampling the latter features 2× and using fast normal-
+ized fusion [44] (labeled FPN Combine). These combined
+features are modified with a second conv-mod-deconv oper-
+ation using the second group of affines,b.
+The final modulated merge produces 64-D features at
+2562 pixels. These features are concatenated withm and the
+features from the first layer, for a total of 3 + 32 + 64 = 99
+channels. A convolutional finishing module is then applied.
+This module has the capacity to further identify and finally
+rendert andr. To simplify comparison to prior work, our fin-
+ishing module is the head in [59]. The first layer is1×1, and
+projects the 99 input features to64-D, which is maintained in
+the remaining operations. Those operations are 3× 3 convo-
+lutions dilated by (1, 2, 4, 8, 16, 32, 64, 1); each is followed
+by a batch norm and leaky ReLU. A final 1× 1 convolution
+generates 6 channels:t andr.
+The model is trained using the perceptual, adversarial,
+and gradient losses of Zhang et al. [59] with a ResNet-based
+discriminator [23], and optimized 5-tap derivatives [13] in
+the exclusion loss to suppress grid artifacts. We also adopt
+thel1 reflection loss of [59] to minimize arbitrary differences
+to prior work. Perceptual losses are computed in non-linear
+sRGB by applying gamma compression and using VGG19
+features, weighted to contribute equally. Crucially, we train
+end-to-end from randomly initialized weights.
+E.2. Upsampler
+The upsampler is shown in Fig. S5 and introduced in
+Sec. 4.2. It transforms low resolution outputs t, r from the
+base model to a flexible output resolution. We use a Gaussian
+pyramid and apply the same upsampler at each level. The up-
+sampler projects the low-res, 3-channel inputs (m,r,t) into
+a high dimensional spaceϕ using convolutions in an expand-
+and-contract pattern. We use 3×3 kernels for feature expan-
+sion, and 1× 1 kernels for contraction. There are 3 layers
+with hidden dimensions(32, 16), (64, 32), (128, 64). We use
+leaky ReLU between the hidden layers, and no skip connec-
+tions. Batch norms are omitted to facilitate a feature match-
+ing process, described next.
+The componentst andr are separated by identifying low
+resolution features ϕt andϕr in the low resolution mixture
+ϕm. We predict 2, per-pixel, per-channel low resolution
+masks using a mask prediction module, Fig. S5 (bottom),
+which uses a paired-channel MLP (defined in Sec. E.1) to
+predict its affine transforms (see also Sec. 4.2). The joint
+mask predictor also uses a paired-channel MLP, but it di-
+rectly outputs the final masks rather than affine transforms.
+The input, hidden, and output dimensions of both paired-
+channel MLPs are (2, 2, 2, 1, 2). The final layer is fully con-
+nected. As noted in Sec. E.1, these MLPs can be imple-
+mented efficiently as a series of grouped 1× 1 convolutions.
+The finishing network is a series of 3× 3 convolutions
+that are distinguished by the number of channels and dila-
+tion rates, 128:(1, 2), 96:(1, 2, 4, 8), 64:(1, 1). A final 1× 1
+convolution produces the 6 channels of output forT andR.
+The upsampler is trained using a cycle-consistency loss
+on the predicted transmission and reflection, in addition to
+the losses of Pawan et al. [35]. Perceptual features are com-
+puted by converting to non-linear sRGB. For each predicted
+high resolution image x′
+H∈{t′
+H,r′
+H} the loss is a weighted
+sum of the following terms: E[|x′
+H−xH|], E[(x′
+H−xH)2],
+E[|∇x′
+H−∇x H|], LPIPS (x′
+H,x H) and E[|D(x′
+H)− xL|],
+whereD downsamplesx′
+H to compute the cycle consistency
+loss, and E denotes expectation over spatial dimensions and
+(where applicable) the output of the gradient operator. We
+use both the l1 and l2 norms to avoid introducing arbitrary
+differences to prior work [35]. The norms are weighted
+0.2, gradient terms 0.4, LPIPS 0.8, and cycle consistency
+10. These losses are accumulated over three upsampling lev-
+els from 1282 to 10242 pixels (smaller than the 2562 pixel
+output size of the base model to contend with memory con-
+straints during training). The upsampler is trained first on
+the ground truth low resolution inputs, and fine tuned on the
+output of the base de-reflection model. When fine tuning,
+the 2562 pixel outputs of the base model are downsampled to
+1282 pixels. At test time, no downsampling is applied. The
+upsampler takes 2562 pixel images as input, and produces
+output at 20482 pixels and higher.
+x x
+c
+Figure S5. Upsampler at one pyramid level.
+F. Results
+Here we provide results and discussion in addition to Sec. 5.
+F.1. Evaluation methods
+Ground truth capture. Ground truth capture was used for
+Fig. 5, Fig. 7, and Fig. S6. Mixture imagesm were captured
+with ground truth r by placing a black material behind the
+glass and taking a second photo. Images t were computed
+t =m−r in linear sRGB after normalizing the exposures
+and using the white point of m (see ACR Step 6, Sec. 3).
+Nonetheless, we found it necessary to capture m andr with
+fixed exposures and white points to avoid imprecisions in the
+values that are stored in RAW metadata.
+SSIM computation. We report SSIM values between
+pairs of RAW images (a,b) by first transforming them into
+linear sRGB (ACR Step6, Sec. 3) using the white point ofa.
+By using a consistent white balance, across the ground truth
+m, t, and r, we penalize errors in the white balance of the
+estimatedt andr. For SSIM computation, images are then
+converted to non-linear sRGB by applying standard gamma
+compression (ACR Step 8):
+xsRGB =
+(
+12.92x x ≤ 0.0031308
+1.055x1/2.4 x> 0.0031308
+wherex are pixel values in a linear sRGB image. We omit
+tone mapping operations (ACR Step 7) to remove subjec-
+tivity from the SSIM values. Lastly, SSIMs are reported as
+averages over the low-resolution images (denoted t, r) and
+high-resolution images (denoted T, R).
+Ground truth photographs. Ground truth images were
+captured in three common scenarios: 1) looking out of a
+home window, Fig. 7; 2) photographing artwork, Fig. S6
+(left); and 3) looking into a display case, Fig. S6 (right). In
+scenario one, the illuminant in the reflection scene is approx-
+imately 3,000K, and the white point of the mixture image
+is 7,300K. In scenario two, these values are 6,000K and
+6,850K, and in scenario three they are 6,000K and 3,627K.
+F.2. Base model comparisons
+Reflections with ground truth. In Fig. S6 we show two im-
+ages with ground truth reflections: photographing artwork,
+and looking into a display case. These complement Fig. 7,
+in which a photo was taken when looking out of a home
+window. The home window view includes an interior re-
+flection that is strongly yellow due to the indoor illuminant
+color. In contrast, the artwork in Fig. S6 is illuminated by
+the same light source as the reflection scene, which produces
+a correctly white balanced reflection that consequently has
+more diverse colors. In contrast, the display case in Fig. S6
+(right) reflects an outdoor scene with a different white bal-
+ance, which produces a strong, blue reflection. This outdoor
+reflection is visible over broad regions because the illumi-
+nant is powerful enough to reflect off of the diffuse ground
+and sidewalk surfaces with sufficient intensity to be visible
+over the contents of the display case. These exterior reflec-
+tions are also qualitatively different from those in photo of
+the artwork, where the reflection is sparse. The SSIM of the
+artwork is therefore high on average (0.994), but the reflec-
+tions are locally strong, whereas the SSIM of the display case
+is low (0.833) because the reflection affects broad regions.
+Our base models improve the SSIM of t and r in all of
+these ground truth examples (labeled in lower case t, r), and
+this extends to the upsampled results (labeled in uppercase
+T, R) whereas prior works do not perform as well (Fig. S6
+and Fig. 7). Our contextual model produces a more correct
+transmission and reflection image on the artwork. On the
+display case, the contextual model improves the reflection,
+whereas the cars are not fully removed. We believe this vari-
+ation results from saturated regions in the sky of the con-
+textual photo, where we use the as-shot illuminant color in
+the EXIF to recover the color of the saturated pixels. Lastly,
+the method of Zhang [59] associates blue colored content
+with the reflection in both images, but this is incorrect for
+the painting; the transmission image is therefore distorted.
+We found that our model removes blue colored reflec-
+tions consistently well, and we believe that this results from
+their commonness (outdoor illuminants are powerful and
+therefore frequently create reflections that appear blue when
+mixed with interior scenes). The yellow color of interior re-
+flections on outdoor scenes also seems to help, as our model
+can separate textured objects like the painting on the wall in
+Fig. 7 from the tree texture. We also tried illuminating the
+indoor scene in Fig. 7 with a special studio light that is much
+more powerful than a typical interior light source. This cre-
+ated a warm indoor reflection that was analogous to the dis-
+play case in Fig. S6 (right), where the reflection covers large
+parts of the transmission scene. Our model results are less
+consistent in this artificial situation. We believe this is be-
+cause it is rare for interiors to be flooded with such strong
+lights, and so their reflections are uncommon in our training
+data. We find that interior reflections tend to appear in small
+regions because most artificial light sources are weak—only
+objects near the light will be bright enough to reflect over
+outdoor scenes. At nighttime, however, consumer illumi-
+nants easily reflect over dark cityscapes. We found that our
+model results are less consistent on such images. This can
+be improved by augmenting the dataset with source images
+t =T (i) that were taken at nighttime.
+Reflections in the wild. In Fig. S7, S8, and Fig. 8 we
+show results on reflections that were captured in-the-wild,
+where it was not possible to capture ground truth: (left) shop-
+ping in the morning, (middle) looking into a building at mid-
+day in a city, and (right) photographing artwork in an out-
+door mall (Fig. S7); while traveling and photographing art-
+Ground Truth Captured PhotoOursZhang (RT) + UpDSRNet (RT) + Up
+t0.985T0.990 r0.613R0.640
+t0.818T0.850
+t0.966T0.976
+t0.994T0.997
+T0.994  R0.316 t0.984  r0.292   
+R0.405 r0.337
+R0.615 r0.639
+R0.740 r0.781
++1.7
++1.7
++1.7
++1.7
++1.7
+context
+t0.952T0.906 r0.792R0.813
+t0.887T0.902
+t0.936T0.956
+t0.966T0.937
+T0.833  R0.620   
+R0.758 r0.620
+R0.864 r0.867
+R0.933 r0.924
+t0.813  R0.550   context
+Ours + Context
+Figure S6. Comparisons with ground truth at 256× 384 and 2048× 3072. The re-trained, low-resolution methods Zhang [59] and
+DSRNet [20] are upsampled using our upsampler, and both low- and high-resolution results are shown. The SSIM of the predicted t and r
+is reported at low resolution (labeled t, r) and high (labeled T, R). Errors in ground truth are outlined and omitted from the SSIM.
+Morning Shopping Midday City Artwork
+Captured PhotoOursZhang - RetrainedDSRNet - RetrainedZhang 8-bit
++2 +2
++2
++2
++2
++2
++0.5
++0.5
++0.5
++0.5
++0.5
++0.5
+DSRNet 8-bit Ours + Context
+Context Context Context
+Figure S7. Results for base models at 2562 pixels. Reflections marked “+X” are brightened by X stops compared to the transmission.
+Travel Midday City / Art Travel
+Captured PhotoOursZhang - RetrainedDSRNet - RetrainedZhang 8-bit
++2
++2
++2
++2
+DSRNet 8-bit Ours + Context
+Context Context Context
+Figure S8. Results for base models at 2562 pixels. Reflections marked “+X” are brightened by X stops compared to the transmission.
+Zhang DSRNet
++1.5+1.5 +1.5Context
+Zhang DSRNet
++1.5+1.5 +1.5Context
+Figure S9. Reflection recovery. Our model separates reflections that can be difficult to spot with the naked eye. See Sec. F.2.
++0.5Context
+Captured Photo Our Result Our Result (Reflection)
+Figure S10. Removing lens flares. Although our training data do not include images of lens flares, our model can sometimes remove them.
++3.5 +3.5 +3.5
+Captured Photo Ground Truth Our Result V-DESIRR
+Figure S11. Upsampler performance comparison. We upsample a ground truth reflection image from 256× 384 to 2048× 3072 using our
+method and V-DESIRR [35]. The latter creates strong artifacts due to resize operations that directly synthesize output pixels. Our model
+eliminates these artifacts while using 29% fewer parameters.
+work from a city street (S8). We compare to Zhang [59] and
+DSRNet [20] using their published8-bit models (bottom two
+rows). The 8-bit models do not consistently remove in-the-
+wild reflections, with the exception that the method of Zhang
+et al. seems to have learned to remove blue colored content
+(left); see also Fig. S9 (top). We retrained these prior works
+on our photometrically accurate training data (marked “re-
+trained”), and they improve significantly. This suggests that
+the muted response of the8-bit models on in-the-wild reflec-
+tions results from differences between their training data and
+real world reflections, and furthermore that the training pro-
+cess of prior works is insufficient: pre-training on photomet-
+rically inaccurate images, and fine-tuning on small datasets
+of ground truth reflections does not produce models that gen-
+eralize as well. Looking closely, however, note that the re-
+trained models do still introduce blur and colored artifacts.
+Our methods perform well across these diverse in-the-
+wild use cases. In Fig. S7, both our contextual and non-
+contextual models separate the strongly blue colored reflec-
+tion, the complex cityscape reflection, and the artwork re-
+flection (in the entrance to an indoor shopping mall). The
+contextual model improves each of these cases, excepting
+the transmission image for the shopping photo. We believe
+this also results from the saturated regions in the upper right
+of the contextual photo, where we have used the as-shot illu-
+minant color in the EXIF to recover the pixels.
+The midday city photo represents a difficult reflection,
+and both of our models improve this image. The result of
+the contextual model is more correct: the interior mural is
+more accurately reconstructed, and the white sign that is ad-
+hered to the glass is left more intact. Saturated regions near
+the ceiling have color artifacts in both cases.
+Lastly, the artwork example (right) has two illuminants, a
+small warm colored artificial light, and a dominant outdoor
+illuminant. The white balance of the image is determined
+by the outdoor illuminant, which also illuminates the reflec-
+tion scene, and this leads to a diversely colored reflection
+that both of our models are able to remove. The contex-
+tual model better preserves the texture of the artwork, and
+does not associate that texture with the reflection, whereas
+the non-contextual model does.
+Subtle reflections. In Fig. S9 we show results on images
+with subtle reflections, which are common in art museums
+where the glass and lighting are optimized to reduce reflec-
+tions. Our models are able to remove these reflections, and
+recoverr even when it is invisible to the naked eye. In the
+painting (Rembrandt’s “St. Matthew and the Angel”), the re-
+covered reflection has a strong blue color due to the special
+glass that is used in museums, and it correctly depicts the
+photographer and gallery. The colors in the recovered paint-
+ing are also more correct. The specular reflection from the
+surface of the painting (top) is not removed, and we believe
+that this is the desired result. We have found that our models
+will sometimes remove sharp specular regions that are sim-
+ilar in color to the reflection from the glass, and this is visi-
+ble in the upper quarter of the reflection image, where some
+specular texture from the surface of the painting is visible,
+and has been removed from the transmission.
+In Fig. S9 (bottom) we remove reflections from Ansel
+Adams’ “Residents of Hornitos.” Ceiling light sources are
+visible at the top of the photo, and on the left there is a gen-
+eral loss of contrast. The recovered transmission image has
+accurately uniform contrast, and the reflection reveals the
+hidden image of the photographer holding their cell phone.
+Our model is able to recover hidden reflections like this in
+part due to the bit depth of RAW images. The reflection is
+also blurry and differs in color.
+Our ability to uncover subtle reflections is in part due to
+the extended bit depth of RAW images. The images in Fig.1,
+Fig. 5-8, Fig. S6-S15 are≥15-bit. ACR Step 3 is uint16.
+Together, the source datasets for the simulation (MIT5K [8]
+and RAISE [10]), are 12- and 14-bit (43%, 57%).
+Lens flares. Our model can also remove lens flares,
+which are reflections from the optical elements within the
+camera lens. An example is shown in Fig. S10. Most of
+the lens flare is removed, excepting one saturated region.
+The flare itself is also recovered in the reflection image even
+though the simulated reflections r in the training dataset do
+not include lens flares. Since our method has some ability to
+generalize to flare removal, and it is difficult to create train-
+ing data for flare removal, it could be helpful to pre-train
+flare removal methods first to remove photometrically accu-
+rate simulated reflections.
+Failures. Failures typically occur when an image is
+too difficult for a person to visually interpret, as shown in
+Fig. S12. Light sources might also be missed, or a halo might
+be left behind, but in-painting methods can fill these holes.
+Reflections are usually removed best when glass covers the
+field-of-view, blocking the photographer from their subject,
+as this matches how the simulation is designed. As a result,
+local reflections on objects are typically not modified, which
+is desirable (e.g. shiny cars, distant windows).
+Results on 8-bit photos. In this work, all results are
+presented on RAW photos because our models are trained
+for RAW. Nonetheless, our RAW-trained models have some
+ability to remove reflections in 8-bit photos if gamma is
+pseudo-inverted, as shown in Fig. S13, but removal may be
+incomplete. This difference between RAW and 8-bit photos
+appears because the latter are produced by diverse camera
+pipelines and artistic adjustments. This diversity of finish-
+ing operations must be considered when training and testing
+models that have been trained on RAW-based simulation im-
+ages. It is therefore not meaningful to test our models on
+datasets of 8-bit images.
+Captured Photo Our Result Our Result (Reflection) Captured Photo Our Result Our Result (Reflection)
+Figure S12. Failure cases. Hard-to-interpret photos can cause reflection removal to be imperfect.
+Captured Photo
+ Result on RAW
+ Result on 8-Bit
+Figure S13. Results when running a RAW-trained model on 8-bit
+inputs. Results on 8-bit photos can be obtained by pseudo-inverting
+gamma, but they are often imperfect because such photos have un-
+dergone a variety of non-linear finishing effects that are not present
+in RAW images (see ACR Steps7-8).
+F.3. Upsampler comparisons
+In Fig. S11 we provide additional comparison to
+V-DESIRR [35] in which we upsample a ground truth
+reflection image (a transmission image is upsampled in
+Fig. 5). A magnified region is inset, and shows that our
+method preserves details of a framed photo through the
+upsampling process, whereas V-DESIRR re-introduces the
+reflection content (the bars of a fence; see captured photo,
+white box). In the rest of the image, V-DESIRR introduces
+strong color artifacts around sharp edges. This is a consistent
+issue that appears to result from the propagation and am-
+plification of small errors that are made at low resolutions.
+Our model reduces error propagation by masking t and r
+out of the high-resolution mixture features at each level.
+We are able to predict an effective, high resolution mask
+with a lightweight and fast model by matching features,
+whereas V-DESIRR must use its model capacity to infer
+from the high-resolution mixture image what details to add
+into the low resolution clean images. This latter problem is
+more difficult to solve with limited model capacity, and it is
+difficult to avoid propagating errors.
+In Fig. S14 we show a typical failure mode of our model.
+The input image (top and center left) has a reflection of a tex-
+V-DESIRR Upsample
+Input Photo
+Our Upsample
+Our Base Output
+Figure S14. Upsampling errors. V-DESIRR [35] re-introduces low-
+frequency reflections. Our method avoids this error, but copies
+high-frequency textures that were not visible at 2562.
+Edited ReflectionOur Result (Reflection)Our ResultCaptured Photo
+Context
+Figure S15. Predicting the reflection enables aesthetic editing and error correction.
+tured exterior wall. Our base model correctly removes this
+reflection at 2562 pixels (center right). Notice that, at low
+resolution, it is possible to represent the vertical edges of the
+exterior wall, but not the texture of the wall. We upsampled
+this result with both V-DESIRR and our model.
+V-DESIRR re-introduces the low frequency edges that
+were removed by the base model, and it copies the high
+frequency wall texture into the transmission as well. Our
+model does not re-introduce the low frequency edges, but
+the high frequency texture of the wall that is not present at
+low resolution is copied into the transmission image. This
+produces a texture artifact in the final result. Future work
+should reduce these kinds of errors while keeping the archi-
+tecture lightweight. This might be done by reusing feature
+information from the base model, and across levels of the
+Gaussian pyramid as the upsampler is iteratively applied.
+F.4. Editing reflections
+In Fig. 6and Fig. S15 we show examples of reflection editing
+for aesthetic control and error correction (see also Sec. 5.4).
+For Fig. S15, a photographer was asked to finish the photo
+using the outputs of the reflection removal system. They
+chose to re-introduce the reflection for aesthetic purposes,
+and to correct errors. The reflections from the edges of the
+top record player cover were removed by our system (white
+arrows); the photographer pulled them back into their edited
+image. Editing was performed in Photoshop using the tone-
+mapped transmission and reflection images, and the “Linear
+Dodge (Add)” layer blend mode.
+G. Adobe Camera RA W, DNG SDK
+Here we detail the code within the DNG SDK [1] version
+1.7.1 that is used in our simulation functions Func. 1, Func.
+S1 and Func. S2. In this work, the necessary SDK function-
+ality was transliterated into Python to interoperate with the
+geometric simulation (Sec. B) and mixture search (Sec. D).
+To simplify the exposition, we however describe the SDK
+code here in a functional manner, whereas the SDK is a class
+system. Consequently, some of the SDK functions use class
+member variables, and not all functions in this exposition of
+the code map one-to-one with functions of the same name in
+the SDK.
+Function S3 Adobe DNG SDK, convert RAW images to XYZ.
+Input: A RAW image
+Output: A linear image in XYZ color
+1: Extract the ACR Stage-3 image I with dng validate option -3.
+{ACR Step 2}
+2: Subtract the Stage-3 black level from I. {SDK Func. S5}
+3: Divide I by the maximum pixel value.
+4: Compute WhiteXY. {SDK Func. S9}
+5: Compute the transform XYZ to CAM from WhiteXY. {SDK Func. S7}
+6: Recover saturated highlights in I. {SDK Func. S6}
+7: Transform I to XYZ using inv(XYZ to CAM).
+{see also SDK Func. S4}
+8: return the linear XYZ image I.
+As discussed in Sec. 3 and Sec. A, reflections are sim-
+ulated in XYZ color space by using the color process-
+ing of the DNG SDK, which supports two paths to a
+white balanced, linear RGB image: the ForwardMatrix
+or the ColorMatrix. Only the latter path facilitates con-
+version to a device-independent color space (XYZ) before
+white balancing, as required for reflection simulation. We
+therefore implement in Func. S3 the ACR color process in
+which the ColorMatrix is used (cf. Func. S4). Note that
+both paths account for the as-shot illuminant because the
+ColorMatrix is interpolated according to the as-shot illu-
+minant (see Func. S9 and Func. S7).
+All supporting DNG SDK functions are listed below.
+Function S4 Adobe DNG SDK, CAM to RGB
+Input: WhiteXY
+Output: Transform to linear RGB
+This function is included here as reference to the entire computation of the
+color transform to linear RGB. Note, the DNG SDK implements the DNG
+Spec. [1]. It uses the ForwardMatrix when it is available, and otherwise
+uses the CameraMatrix. In this work we use only the CameraMatrix,
+since this supports white balancing after conversion to XYZ.
+1: See dng color spec.cpp:573-609.
+Function S5 Adobe DNG SDK, get Stage3BlackLevel
+Input: A DNG file
+Output: The black level
+The Stage-3 black level is not stored in the DNG EXIF header.It is a global
+scalar offset that remains after spatially varying black levels have been
+removed by parsing and applying the black level tags. By default, the DNG
+SDK Stage-3 image has a black level of zero, and negative noise values
+have been clipped to zero. In this work, we adopt that convention and clip
+the negative noise for simplicity. Clipping can however be disabled, and the
+non-zero Stage-3 black level can be recovered with a minor modification to
+the dng validate binary, described below. The black level can then be
+read from the printed output of dng validate when the stage-3 image is
+extracted with the -3 option.
+1: return true for SupportsPreservedBlackLevels
+{dng mosaic info.cpp:2014}
+2: return true for SupportsPreservedBlackLevels
+{dng negative.cpp:5814}
+3: printf((uint16) negative->Stage3BlackLevel())
+{dng validate.cpp:293}
+Function S6 Adobe DNG SDK, recover saturated highlights
+Input: An image in camera color space
+Output: Image with clipped higlights repaired
+1: Compute CameraWhite
+{dng color spec.cpp:548-568}
+2: return∀c, min(c, CameraWhite)
+{dng render.cpp:1785→ dng reference.cpp:1389}
+Function S7 Adobe DNG SDK, FindXYZtoCamera
+Input: White point XY
+Output: Matrix XYZ to CAM
+1: See dng color spec.cpp:541
+{In practice, calls FindXYZtoCamera SingleOrDual.}
+Function S8 Adobe DNG SDK, NeutralToXY (projected, cf.
+SDK Func. S10)
+Input: An AWB white point in camera color space.
+Output: XYZ to CAM awb and WhiteXY awb
+1: for all kelvinsK do{plausible kelvin values}
+2: Compute the XY coordinate of K. {SDK Func. S15}
+3: Compute the transform XYZ to CAM from XY . {SDK Func. S7}
+4: Compute the XYZ coordinate of XY . {SDK Func. S16}
+5: Project the XYZ coordinate into camera color using XYZ to CAM.
+6: if the projected XYZ is closer to the AWB point than previous values
+then
+7: Save XY
+8: end if
+9: end for
+10: return the saved XY value and its associated XYZ
+to CAM matrix.
+Function S9 Adobe DNG SDK, computing WhiteXY and
+CameraWhite
+Input: DNG AsShotXY XOR AsShotNeutral{All DNGs have one xor
+the other.}
+Output: White point in XY
+1: Compute WhiteXY. {dng render.cpp:892,899}
+Function S10 Adobe DNG SDK, NeutralToXY
+Input: DNG AsShotNeutral value
+Output: An XY coordinate
+1: See dng color spec.cpp:659
+Function S11 Adobe DNG SDK, compute XYZ to sRGB
+Input: An XY white point, XYPoint.
+Output: Matrix XYZ to sRGB.
+1: Get the transform XYZ D50 to sRGB. {SDK Func. S12}
+2: Get the D50 XY coordinate XY D50. {SDK Func. S14}
+3: Compute matrix XYZ to XYZ D50 using XY D50 and XYPoint.
+{SDK Func. S13}
+4: return XYZ D50 to sRGB · XYZ to XYZ D50
+Function S12 Adobe DNG SDK, get XYZ D50 to sRGB
+Input: None
+Output: The transform from XYZ D50 to linear sRGB.
+1: See dng color space.cpp:254, which specifies the inverse matrix.
+Function S13 Adobe DNG SDK, MapWhiteMatrix
+Input: Two white points, w1 to w2.
+Output: Bradford adaptation matrix.
+1: See dng color spec.cpp:22.
+Function S14 Adobe DNG SDK, D50 xy coord
+Input: None
+Output: XY coordinate of the D50 illuminant
+1: See dng xy coord.h:145.
+Function S15 Adobe DNG SDK, Get xy coord.
+Input: A scalar temperature value,K.
+Output: An XY coordinate.
+1: See dng temperature.cpp:173.
+Function S16 Adobe DNG SDK, XYtoXYZ.
+Input: An XY vaue.
+Output: An XYZ value
+1: See dng xy coord.cpp:47.
+Function S17 Adobe DNG SDK, sRGB to linear sRGB.
+Input: A gamma compressed sRGB value
+Output: A linear sRGB value
+1: See dng color space.cpp:34.
