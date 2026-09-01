@@ -11,12 +11,31 @@ Two pieces, both from dng_sdk/source:
     keeps hues stable instead of desaturating them, which a naive per-channel
     curve would do.
 
-This reproduces ACR *steps 7-8 in their baseline form only*: a global curve plus
-gamma. The spatially adaptive part of step 7 that Kee et al. describe -- dehaze,
-adaptive highlights/shadows, clarity, texture, local contrast -- is not in the
-DNG SDK at all (dng_render_params holds only WhiteXY, Exposure, Shadows,
-ToneCurve, FinalSpace), and is not reproducible. That irreproducibility is the
-paper's own argument for simulating reflections before step 7, never after.
+This reproduces ACR steps 7-8 in their *baseline* form: a global curve plus gamma.
+What it leaves out, in decreasing order of reproducibility:
+
+  1. Camera profile data -- ProfileHueSatMapData, ProfileLookTableData,
+     ProfileToneCurve, BaselineExposure. These ARE camera specific and they ARE
+     reproducible: dng_render pulls them off the negative and applies them
+     (dng_render.cpp:965-1000, 1908-1998). We skip them because MIT5K DNGs carry
+     none of the three tables -- only ProfileName and BaselineExposure -- so on
+     that dataset the SDK baseline render reduces to the color matrices plus
+     this default curve, which is what this module implements.
+  2. ACR's spatially adaptive processing -- dehaze, adaptive highlights/shadows,
+     clarity, texture, local contrast. NOT camera specific, and not reproducible
+     for two independent reasons: the algorithms are proprietary and absent from
+     the SDK, and their parameters are per-photo user choices living in XMP
+     sidecars, not in the RAW. There is no correct value to recover.
+  3. A camera's own JPEG ISP -- multi-frame HDR fusion, local tone mapping,
+     denoising. Camera specific AND undocumented.
+
+Tier 2 is what forbids simulating reflections after step 7. A global monotone
+curve is invertible: one could in principle undo it, mix in linear, and redo it.
+A content-adaptive local operator is a function of the whole image rather than of
+the pixel, so the transform a camera applies to a mixture is not the one it would
+apply to that mixture's transmission alone -- there is no single f to invert.
+Hence Kee et al. Sec. 3: step 7 performs "proprietary, non-linear, and spatially
+varying effects that cannot be modeled with a gamma curve as is often done".
 """
 import numpy as np
 
