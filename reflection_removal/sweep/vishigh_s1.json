@@ -1,0 +1,19 @@
+{
+  "dim": 32,
+  "dim_mults": "1,2,4",
+  "lr": 0.001,
+  "iters": 10000,
+  "eval_every": 500,
+  "batch_size": 16,
+  "workers": 6,
+  "weights": "0.8,0.1,0.1",
+  "simulated": true,
+  "tone": true,
+  "t_key": "t",
+  "pixel": 1.0,
+  "perceptual": 0.1,
+  "gradient": 0.1,
+  "ckpt": true,
+  "seed": 1,
+  "npz_dir": "/home/damien/data_fivek_dng/simvis_high"
+}

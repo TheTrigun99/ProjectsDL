@@ -27,6 +27,9 @@ cv2.setNumThreads(0)          # one thread per worker, not one pool per worker
 OTHERS = Path("/home/damien/data_others")
 SIM = Path("/home/damien/data_fivek_dng/simulated")
 SIM_NM = Path("/home/damien/data_fivek_dng/simulated_not_modified")
+SIM_biased = Path("/home/damien/data_fivek_dng/simulated_biaised1")
+SIM_biased2 = Path("/home/damien/data_fivek_dng/simulated_biaised2")
+SIM_big = Path("/home/damien/data_fivek_dng/simulated_big_biaised2")
 IMG_EXT = {".png", ".jpg", ".jpeg"}
 
 
@@ -119,13 +122,18 @@ class SimulatedNpzDataset(Dataset):
                 reproducible, for a fixed validation split.
     """
 
-    def __init__(self, npz_dir=SIM, finish=None, *, tone=False, ev_jitter=0.0,
+    def __init__(self, npz_dir=SIM, finish=None, *, tone=False, ev_jitter=(0, 0),
                  jpeg: JpegAug = JpegAug(), seed=None, source="sim", t_key="t"):
         self.paths = sorted(Path(npz_dir).glob("ex_*.npz"))
         if not self.paths:
             raise FileNotFoundError(f"no ex_*.npz under {npz_dir}")
         self.finish, self.tone = finish, tone
-        self.ev_jitter, self.jpeg = float(ev_jitter), jpeg
+        self.jpeg = jpeg
+        if ev_jitter is not None:
+            self.ev_j = True
+            self.ev_j_min, self.ev_j_max = ev_jitter
+        else:
+            self.ev_j = False
         self.seed, self.source = seed, source
         # quelle cle du npz sert de transmission supervisee. "t" = la couche
         # telle que composee ; un autre nom (ex. "t_true") permet de comparer
@@ -149,7 +157,10 @@ class SimulatedNpzDataset(Dataset):
 
         # one render setting for both layers: the ISP must not add a difference
         # between M and T that the compositing did not put there
-        ev = rnd.uniform(-self.ev_jitter, self.ev_jitter) if self.ev_jitter else 0.0
+        if self.ev_j:
+            ev = rnd.uniform(self.ev_j_min, self.ev_j_max)
+        else:
+             ev = 0
         img = {k: self.finish(v, ev=ev, tone=self.tone) for k, v in lin.items()}
 
         # always compressed: the benchmarks are JPEG, a pristine simulation
@@ -309,6 +320,8 @@ def build_train_loader(finish, batch_size=16, size=224, workers=8,
                            jpeg=jpeg, source="real89"),
 
         ]
+
+
     weights = weights[:len(sets)] 
     w = [p / len(d) for d, p in zip(sets, weights) for _ in range(len(d))]
     return DataLoader(

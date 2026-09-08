@@ -1,0 +1,41 @@
+{
+  "gpu": "5",
+  "cfg": "sweep/SMnotone_seed0.json",
+  "name": "SMnotone_seed0",
+  "out": "runs",
+  "force": false,
+  "seed": 0,
+  "ckpt": false,
+  "dim": 32,
+  "dim_mults": [
+    1,
+    2,
+    4
+  ],
+  "channel": 3,
+  "compile": true,
+  "lr": 0.001,
+  "iters": 10000,
+  "eval_every": 500,
+  "eval_batches": 100,
+  "batch_size": 16,
+  "workers": 6,
+  "eval_workers": 3,
+  "size": 224,
+  "weights": [
+    0.8,
+    0.1,
+    0.1
+  ],
+  "simulated": true,
+  "tone": false,
+  "npz_dir": "/home/damien/data_fivek_dng/simulated",
+  "t_key": "t",
+  "ev_jitter": [
+    -1.9,
+    0.9
+  ],
+  "pixel": 1.0,
+  "perceptual": 0.1,
+  "gradient": 0.1
+}

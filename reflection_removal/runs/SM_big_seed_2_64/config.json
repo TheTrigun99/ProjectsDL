@@ -1,0 +1,41 @@
+{
+  "gpu": "5",
+  "cfg": "sweep/SM_big_seed_2_64.json",
+  "name": "SM_big_seed_2_64",
+  "out": "runs",
+  "force": false,
+  "seed": 2,
+  "ckpt": false,
+  "dim": 64,
+  "dim_mults": [
+    1,
+    2,
+    4
+  ],
+  "channel": 3,
+  "compile": true,
+  "lr": 0.001,
+  "iters": 15000,
+  "eval_every": 1000,
+  "eval_batches": 100,
+  "batch_size": 16,
+  "workers": 6,
+  "eval_workers": 3,
+  "size": 224,
+  "weights": [
+    0.96,
+    0.02,
+    0.02
+  ],
+  "simulated": true,
+  "tone": true,
+  "npz_dir": "/home/damien/data_fivek_dng/simulated_big_biaised2",
+  "t_key": "t",
+  "ev_jitter": [
+    -1.9,
+    0.9
+  ],
+  "pixel": 1.0,
+  "perceptual": 0.1,
+  "gradient": 0.1
+}

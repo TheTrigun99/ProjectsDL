@@ -1,0 +1,41 @@
+{
+  "gpu": "3",
+  "cfg": "sweep/vislow_s1.json",
+  "name": "vislow_s1",
+  "out": "runs",
+  "force": true,
+  "seed": 795062984,
+  "ckpt": true,
+  "dim": 32,
+  "dim_mults": [
+    1,
+    2,
+    4
+  ],
+  "channel": 3,
+  "compile": false,
+  "lr": 0.001,
+  "iters": 10000,
+  "eval_every": 500,
+  "eval_batches": 100,
+  "batch_size": 16,
+  "workers": 6,
+  "eval_workers": 3,
+  "size": 224,
+  "weights": [
+    0.8,
+    0.1,
+    0.1
+  ],
+  "simulated": true,
+  "tone": true,
+  "npz_dir": "/home/damien/data_fivek_dng/simvis_low",
+  "t_key": "t",
+  "ev_jitter": [
+    -1.9,
+    0.9
+  ],
+  "pixel": 1.0,
+  "perceptual": 0.1,
+  "gradient": 0.1
+}

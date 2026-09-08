@@ -1,0 +1,64 @@
+=== VOCseed_2 ===
+{
+  "gpu": "5",
+  "cfg": "sweep/VOCseed_2.json",
+  "name": "VOCseed_2",
+  "out": "runs",
+  "force": false,
+  "seed": 2,
+  "ckpt": false,
+  "dim": 32,
+  "dim_mults": [
+    1,
+    2,
+    4
+  ],
+  "channel": 3,
+  "compile": true,
+  "lr": 0.001,
+  "iters": 10000,
+  "eval_every": 500,
+  "eval_batches": 100,
+  "batch_size": 16,
+  "workers": 6,
+  "eval_workers": 3,
+  "size": 224,
+  "weights": [
+    0.8,
+    0.1,
+    0.1
+  ],
+  "simulated": false,
+  "tone": true,
+  "npz_dir": "/home/damien/data_fivek_dng/simulated",
+  "t_key": "t",
+  "ev_jitter": [
+    -1.9,
+    0.9
+  ],
+  "pixel": 1.0,
+  "perceptual": 0.1,
+  "gradient": 0.1
+}
+1.3 M paramètres  |  device cuda  |  CUDA_VISIBLE_DEVICES=5
+it      0  loss 0.4414  lr 4.00e-05    0.3 min  |  PSNR mixture->modèle, SSIM : postcard 20.81->20.85 ssim 0.864  solid 24.02->24.05 ssim 0.891  wild 24.79->24.83 ssim 0.893  nature20 20.62->20.64 ssim 0.828  real20 18.78->18.80 ssim 0.756
+it    500  loss 0.4457  lr 1.04e-04    1.2 min  |  PSNR mixture->modèle, SSIM : postcard 20.81->19.08 ssim 0.850  solid 24.02->21.25 ssim 0.883  wild 24.79->24.00 ssim 0.896  nature20 20.62->20.49 ssim 0.827  real20 18.78->19.46 ssim 0.759
+it   1000  loss 0.4470  lr 2.80e-04    2.0 min  |  PSNR mixture->modèle, SSIM : postcard 20.81->20.60 ssim 0.856  solid 24.02->22.94 ssim 0.887  wild 24.79->24.52 ssim 0.891  nature20 20.62->20.61 ssim 0.825  real20 18.78->19.14 ssim 0.753
+it   1500  loss 0.3988  lr 5.20e-04    2.8 min  |  PSNR mixture->modèle, SSIM : postcard 20.81->21.34 ssim 0.861  solid 24.02->23.47 ssim 0.898  wild 24.79->24.86 ssim 0.896  nature20 20.62->20.68 ssim 0.815  real20 18.78->19.85 ssim 0.769
+it   2000  loss 0.3868  lr 7.60e-04    3.6 min  |  PSNR mixture->modèle, SSIM : postcard 20.81->20.85 ssim 0.850  solid 24.02->23.02 ssim 0.886  wild 24.79->24.06 ssim 0.891  nature20 20.62->20.03 ssim 0.785  real20 18.78->19.51 ssim 0.754
+it   2500  loss 0.4080  lr 9.36e-04    4.4 min  |  PSNR mixture->modèle, SSIM : postcard 20.81->21.19 ssim 0.854  solid 24.02->23.15 ssim 0.887  wild 24.79->24.52 ssim 0.896  nature20 20.62->20.14 ssim 0.787  real20 18.78->19.47 ssim 0.754
+it   3000  loss 0.3786  lr 1.00e-03    5.3 min  |  PSNR mixture->modèle, SSIM : postcard 20.81->21.36 ssim 0.862  solid 24.02->23.72 ssim 0.894  wild 24.79->24.70 ssim 0.898  nature20 20.62->20.53 ssim 0.806  real20 18.78->20.08 ssim 0.767
+it   3500  loss 0.3316  lr 9.88e-04    6.1 min  |  PSNR mixture->modèle, SSIM : postcard 20.81->20.78 ssim 0.859  solid 24.02->23.61 ssim 0.894  wild 24.79->24.71 ssim 0.898  nature20 20.62->20.52 ssim 0.813  real20 18.78->20.04 ssim 0.767
+it   4000  loss 0.3257  lr 9.51e-04    6.9 min  |  PSNR mixture->modèle, SSIM : postcard 20.81->21.57 ssim 0.867  solid 24.02->24.63 ssim 0.902  wild 24.79->25.57 ssim 0.907  nature20 20.62->21.06 ssim 0.829  real20 18.78->20.21 ssim 0.776
+it   4500  loss 0.3669  lr 8.91e-04    7.8 min  |  PSNR mixture->modèle, SSIM : postcard 20.81->21.82 ssim 0.868  solid 24.02->24.25 ssim 0.901  wild 24.79->25.32 ssim 0.905  nature20 20.62->20.79 ssim 0.813  real20 18.78->20.23 ssim 0.775
+it   5000  loss 0.3776  lr 8.12e-04    8.6 min  |  PSNR mixture->modèle, SSIM : postcard 20.81->20.84 ssim 0.862  solid 24.02->24.66 ssim 0.908  wild 24.79->26.07 ssim 0.912  nature20 20.62->21.22 ssim 0.825  real20 18.78->20.13 ssim 0.775
+it   5500  loss 0.3162  lr 7.18e-04    9.4 min  |  PSNR mixture->modèle, SSIM : postcard 20.81->21.09 ssim 0.861  solid 24.02->24.26 ssim 0.900  wild 24.79->25.30 ssim 0.907  nature20 20.62->21.09 ssim 0.819  real20 18.78->20.52 ssim 0.775
+it   6000  loss 0.3388  lr 6.12e-04   10.3 min  |  PSNR mixture->modèle, SSIM : postcard 20.81->21.44 ssim 0.859  solid 24.02->25.10 ssim 0.908  wild 24.79->26.25 ssim 0.911  nature20 20.62->21.31 ssim 0.830  real20 18.78->20.38 ssim 0.783
+it   6500  loss 0.3554  lr 5.01e-04   11.1 min  |  PSNR mixture->modèle, SSIM : postcard 20.81->21.42 ssim 0.862  solid 24.02->25.18 ssim 0.912  wild 24.79->25.65 ssim 0.910  nature20 20.62->21.36 ssim 0.830  real20 18.78->20.13 ssim 0.776
+it   7000  loss 0.3120  lr 3.90e-04   11.9 min  |  PSNR mixture->modèle, SSIM : postcard 20.81->20.36 ssim 0.855  solid 24.02->24.91 ssim 0.908  wild 24.79->25.64 ssim 0.910  nature20 20.62->21.53 ssim 0.832  real20 18.78->20.09 ssim 0.776
+it   7500  loss 0.2921  lr 2.84e-04   12.8 min  |  PSNR mixture->modèle, SSIM : postcard 20.81->20.94 ssim 0.859  solid 24.02->25.29 ssim 0.910  wild 24.79->25.41 ssim 0.907  nature20 20.62->21.82 ssim 0.837  real20 18.78->20.22 ssim 0.780
+it   8000  loss 0.2703  lr 1.89e-04   13.6 min  |  PSNR mixture->modèle, SSIM : postcard 20.81->19.92 ssim 0.849  solid 24.02->25.12 ssim 0.910  wild 24.79->25.59 ssim 0.909  nature20 20.62->21.78 ssim 0.836  real20 18.78->20.05 ssim 0.776
+it   8500  loss 0.2693  lr 1.10e-04   14.4 min  |  PSNR mixture->modèle, SSIM : postcard 20.81->21.13 ssim 0.865  solid 24.02->25.35 ssim 0.909  wild 24.79->25.57 ssim 0.910  nature20 20.62->21.88 ssim 0.838  real20 18.78->20.13 ssim 0.780
+it   9000  loss 0.2840  lr 5.02e-05   15.2 min  |  PSNR mixture->modèle, SSIM : postcard 20.81->20.20 ssim 0.855  solid 24.02->25.44 ssim 0.911  wild 24.79->25.56 ssim 0.906  nature20 20.62->21.98 ssim 0.839  real20 18.78->20.01 ssim 0.780
+it   9500  loss 0.2377  lr 1.29e-05   16.1 min  |  PSNR mixture->modèle, SSIM : postcard 20.81->20.90 ssim 0.861  solid 24.02->25.46 ssim 0.911  wild 24.79->25.41 ssim 0.905  nature20 20.62->22.11 ssim 0.840  real20 18.78->20.22 ssim 0.781
+it  10000  FIN  16.9 min  |  postcard 20.81->20.74 ssim 0.860  solid 24.02->25.52 ssim 0.912  wild 24.79->25.50 ssim 0.907  nature20 20.62->22.11 ssim 0.840  real20 18.78->20.22 ssim 0.782

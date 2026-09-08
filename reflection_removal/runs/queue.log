@@ -1,0 +1,13 @@
+nohup: ignoring input
+3 configs à passer sur 3 GPUs (3 5 6)
+[11:34] GPU 3  démarre  SM_big_seed_0_64
+[11:34] GPU 6  démarre  SM_big_seed_1_64
+[11:34] GPU 5  démarre  SM_big_seed_2_64
+[12:12] GPU 3  fini     SM_big_seed_0_64
+[12:12] GPU 3  file vide, worker terminé
+[12:12] GPU 5  fini     SM_big_seed_2_64
+[12:12] GPU 5  file vide, worker terminé
+[12:13] GPU 6  fini     SM_big_seed_1_64
+[12:13] GPU 6  file vide, worker terminé
+
+[12:13] terminé. Résultats dans runs/<name>/{log.txt,hist.json}

@@ -1,0 +1,61 @@
+=== SM_big_seed_0_64 ===
+{
+  "gpu": "3",
+  "cfg": "sweep/SM_big_seed_0_64.json",
+  "name": "SM_big_seed_0_64",
+  "out": "runs",
+  "force": false,
+  "seed": 0,
+  "ckpt": false,
+  "dim": 64,
+  "dim_mults": [
+    1,
+    2,
+    4
+  ],
+  "channel": 3,
+  "compile": true,
+  "lr": 0.001,
+  "iters": 15000,
+  "eval_every": 1000,
+  "eval_batches": 100,
+  "batch_size": 16,
+  "workers": 6,
+  "eval_workers": 3,
+  "size": 224,
+  "weights": [
+    0.96,
+    0.02,
+    0.02
+  ],
+  "simulated": true,
+  "tone": true,
+  "npz_dir": "/home/damien/data_fivek_dng/simulated_big_biaised2",
+  "t_key": "t",
+  "ev_jitter": [
+    -1.9,
+    0.9
+  ],
+  "pixel": 1.0,
+  "perceptual": 0.1,
+  "gradient": 0.1
+}
+5.3 M paramètres  |  device cuda  |  CUDA_VISIBLE_DEVICES=3
+/home/damien/ProjectsDL/reflection_removal/train.py:257: UserWarning: Detected call of `lr_scheduler.step()` before `optimizer.step()`. In PyTorch 1.1.0 and later, you should call them in the opposite order: `optimizer.step()` before `lr_scheduler.step()`.  Failure to do this will result in PyTorch skipping the first value of the learning rate schedule. See more details at https://pytorch.org/docs/stable/optim.html#how-to-adjust-learning-rate
+  sched.step()
+it      0  loss 0.4357  lr 4.00e-05    1.3 min  |  PSNR mixture->modèle, SSIM : postcard 20.81->20.81 ssim 0.864  solid 24.02->24.02 ssim 0.890  wild 24.79->24.79 ssim 0.893  nature20 20.62->20.62 ssim 0.827  real20 18.78->18.78 ssim 0.755
+it   1000  loss 0.4729  lr 1.52e-04    3.8 min  |  PSNR mixture->modèle, SSIM : postcard 20.81->21.52 ssim 0.856  solid 24.02->22.91 ssim 0.902  wild 24.79->24.60 ssim 0.899  nature20 20.62->21.03 ssim 0.831  real20 18.78->19.75 ssim 0.775
+it   2000  loss 0.3729  lr 4.37e-04    6.3 min  |  PSNR mixture->modèle, SSIM : postcard 20.81->21.46 ssim 0.848  solid 24.02->23.68 ssim 0.903  wild 24.79->24.88 ssim 0.892  nature20 20.62->21.33 ssim 0.827  real20 18.78->19.81 ssim 0.777
+it   3000  loss 0.4747  lr 7.60e-04    8.8 min  |  PSNR mixture->modèle, SSIM : postcard 20.81->22.08 ssim 0.859  solid 24.02->25.22 ssim 0.911  wild 24.79->25.17 ssim 0.900  nature20 20.62->21.71 ssim 0.831  real20 18.78->20.11 ssim 0.783
+it   4000  loss 0.4073  lr 9.71e-04   11.4 min  |  PSNR mixture->modèle, SSIM : postcard 20.81->21.12 ssim 0.848  solid 24.02->25.12 ssim 0.910  wild 24.79->25.61 ssim 0.905  nature20 20.62->21.82 ssim 0.833  real20 18.78->20.03 ssim 0.773
+it   5000  loss 0.4411  lr 9.94e-04   13.8 min  |  PSNR mixture->modèle, SSIM : postcard 20.81->20.17 ssim 0.842  solid 24.02->24.48 ssim 0.908  wild 24.79->25.43 ssim 0.900  nature20 20.62->21.89 ssim 0.832  real20 18.78->20.51 ssim 0.787
+it   6000  loss 0.3969  lr 9.51e-04   16.3 min  |  PSNR mixture->modèle, SSIM : postcard 20.81->20.40 ssim 0.845  solid 24.02->24.13 ssim 0.904  wild 24.79->24.96 ssim 0.900  nature20 20.62->21.58 ssim 0.826  real20 18.78->20.59 ssim 0.788
+it   7000  loss 0.3741  lr 8.67e-04   18.7 min  |  PSNR mixture->modèle, SSIM : postcard 20.81->21.50 ssim 0.859  solid 24.02->25.11 ssim 0.913  wild 24.79->25.41 ssim 0.908  nature20 20.62->22.13 ssim 0.840  real20 18.78->20.73 ssim 0.790
+it   8000  loss 0.3621  lr 7.50e-04   21.2 min  |  PSNR mixture->modèle, SSIM : postcard 20.81->20.87 ssim 0.843  solid 24.02->24.87 ssim 0.909  wild 24.79->25.54 ssim 0.907  nature20 20.62->22.26 ssim 0.836  real20 18.78->20.69 ssim 0.789
+it   9000  loss 0.3156  lr 6.12e-04   23.6 min  |  PSNR mixture->modèle, SSIM : postcard 20.81->21.61 ssim 0.857  solid 24.02->25.91 ssim 0.919  wild 24.79->25.57 ssim 0.908  nature20 20.62->21.92 ssim 0.837  real20 18.78->20.56 ssim 0.782
+it  10000  loss 0.3330  lr 4.63e-04   26.1 min  |  PSNR mixture->modèle, SSIM : postcard 20.81->20.63 ssim 0.848  solid 24.02->26.04 ssim 0.920  wild 24.79->25.84 ssim 0.914  nature20 20.62->22.11 ssim 0.842  real20 18.78->20.88 ssim 0.787
+it  11000  loss 0.3904  lr 3.18e-04   28.5 min  |  PSNR mixture->modèle, SSIM : postcard 20.81->22.33 ssim 0.873  solid 24.02->26.16 ssim 0.921  wild 24.79->25.67 ssim 0.911  nature20 20.62->22.05 ssim 0.843  real20 18.78->20.85 ssim 0.796
+it  12000  loss 0.3495  lr 1.89e-04   31.0 min  |  PSNR mixture->modèle, SSIM : postcard 20.81->21.56 ssim 0.862  solid 24.02->25.75 ssim 0.917  wild 24.79->25.95 ssim 0.916  nature20 20.62->22.50 ssim 0.848  real20 18.78->20.94 ssim 0.794
+it  13000  loss 0.3484  lr 8.74e-05   33.4 min  |  PSNR mixture->modèle, SSIM : postcard 20.81->20.93 ssim 0.862  solid 24.02->25.66 ssim 0.920  wild 24.79->26.24 ssim 0.919  nature20 20.62->22.53 ssim 0.850  real20 18.78->21.08 ssim 0.803
+it  14000  loss 0.2932  lr 2.25e-05   35.9 min  |  PSNR mixture->modèle, SSIM : postcard 20.81->20.84 ssim 0.860  solid 24.02->25.63 ssim 0.918  wild 24.79->26.01 ssim 0.916  nature20 20.62->22.45 ssim 0.849  real20 18.78->21.09 ssim 0.803
+it  15000  FIN  38.3 min  |  postcard 20.81->20.90 ssim 0.859  solid 24.02->25.73 ssim 0.919  wild 24.79->26.00 ssim 0.916  nature20 20.62->22.43 ssim 0.849  real20 18.78->21.07 ssim 0.802

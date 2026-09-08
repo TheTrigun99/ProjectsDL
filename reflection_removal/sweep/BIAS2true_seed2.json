@@ -1,0 +1,12 @@
+{
+  "dim": 32,
+  "lr": 0.001,
+  "iters": 10000,
+  "eval_every": 500,
+  "ckpt": false,
+  "dim-mults": "1,2,4",
+  "weights": "0.8, 0.1, 0.1",
+  "npz-dir": "/home/damien/data_fivek_dng/simulated_biaised2",
+  "t-key": "true_t",
+  "seed": 2
+}
