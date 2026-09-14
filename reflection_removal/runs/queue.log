@@ -11,3 +11,18 @@ nohup: ignoring input
 [12:13] GPU 6  file vide, worker terminé
 
 [12:13] terminé. Résultats dans runs/<name>/{log.txt,hist.json}
+3 configs à passer sur 2 GPUs (5 6)
+[00:26] GPU 5  démarre  SM_big_biased_seed_2
+[00:26] GPU 6  démarre  SM_big_biased_seed_1
+[00:26] GPU 6  reprise  SM_big_biased_seed_1 (essai 2) --seed 1036815437 --no-compile --force
+[00:26] GPU 5  reprise  SM_big_biased_seed_2 (essai 2) --seed 657788472 --no-compile --force
+[00:26] GPU 5  reprise  SM_big_biased_seed_2 (essai 3) --seed 473218963 --no-compile --force
+[00:26] GPU 6  reprise  SM_big_biased_seed_1 (essai 3) --seed 735604594 --no-compile --force
+[00:26] GPU 5  ABANDON  SM_big_biased_seed_2 après 3 essais -> runs/SM_big_biased_seed_2.crash*.log
+[00:26] GPU 5  démarre  SM_big_biased_seed_0_64
+[00:26] GPU 6  ABANDON  SM_big_biased_seed_1 après 3 essais -> runs/SM_big_biased_seed_1.crash*.log
+[00:26] GPU 6  file vide, worker terminé
+[02:17] GPU 5  fini     SM_big_biased_seed_0_64
+[02:17] GPU 5  file vide, worker terminé
+
+[02:17] terminé. Résultats dans runs/<name>/{log.txt,hist.json}

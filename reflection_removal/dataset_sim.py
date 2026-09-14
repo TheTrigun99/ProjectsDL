@@ -30,6 +30,8 @@ SIM_NM = Path("/home/damien/data_fivek_dng/simulated_not_modified")
 SIM_biased = Path("/home/damien/data_fivek_dng/simulated_biaised1")
 SIM_biased2 = Path("/home/damien/data_fivek_dng/simulated_biaised2")
 SIM_big = Path("/home/damien/data_fivek_dng/simulated_big_biaised2")
+SIM_consistent = Path("/home/damien/data_fivek_dng/dataset_soomin_final")
+SIM_big_soomin = Path("/home/damien/data_fivek_dng/dataset_final_test1")
 IMG_EXT = {".png", ".jpg", ".jpeg"}
 
 
@@ -135,9 +137,6 @@ class SimulatedNpzDataset(Dataset):
         else:
             self.ev_j = False
         self.seed, self.source = seed, source
-        # quelle cle du npz sert de transmission supervisee. "t" = la couche
-        # telle que composee ; un autre nom (ex. "t_true") permet de comparer
-        # deux definitions de la cible sans regenerer les fichiers.
         self.t_key = t_key
 
     def __len__(self):
@@ -172,7 +171,6 @@ class SimulatedNpzDataset(Dataset):
         out["source"], out["name"] = self.source, path.stem
         return out
 
-
 # ---------------------------------------------------------------------------
 # Source 2: real photographs already on disk
 # ---------------------------------------------------------------------------
@@ -186,7 +184,7 @@ class PairedImageDataset(Dataset):
                     (1.0, 1.0) keeps the whole field of view and only rescales,
                     which is what you want for photos that are already small."""
 
-    def __init__(self, samples, *, size=224, train=True, jpeg=None,
+    def __init__(self, samples, *, size=384, train=True, jpeg=None,
                  frac=(0.4, 1.0), pad_multiple=32, seed=None, source=""):
         if not samples:
             raise ValueError(f"empty sample list for {source!r}")

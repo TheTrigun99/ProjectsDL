@@ -49,7 +49,7 @@ from acr_tone import finish                                     # noqa: E402
 from dataset_sim import SIM, build_eval_loaders, build_train_loader  # noqa: E402
 from loss_ref import ReflectionLoss, psnr                       # noqa: E402
 from models.unet_simple import Unet                             # noqa: E402
-from dataset_sim import SIM_big, SIM_biased, SIM_biased2, SIM_NM
+from dataset_sim import SIM_big, SIM_biased, SIM_biased2, SIM_NM, SIM_consistent
 DEVICE = "cuda" 
 
 
@@ -95,7 +95,7 @@ def parse_args(argv=None):
     # en rajoute 3 par run. Au-delà les GPUs attendent le CPU.
     g.add_argument("--workers", type=int, default=6)
     g.add_argument("--eval-workers", type=int, default=3)
-    g.add_argument("--size", type=int, default=224)
+    g.add_argument("--size", type=int, default=384)
     g.add_argument("--weights", default="0.96,0.02,0.02",
                    help="probabilités d'échantillonnage (simulé, nature, real89)")
     g.add_argument("--simulated", action=bool_flag, default=True)

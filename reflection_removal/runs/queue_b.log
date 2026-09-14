@@ -1,0 +1,20 @@
+2 configs à passer sur 1 GPUs (6)
+[00:31] GPU 6  démarre  SM_big_biased_seed_1_64
+[02:22] GPU 6  fini     SM_big_biased_seed_1_64
+[02:22] GPU 6  démarre  SM_big_biased_seed_2_64
+[04:16] GPU 6  fini     SM_big_biased_seed_2_64
+[04:16] GPU 6  file vide, worker terminé
+
+[04:16] terminé. Résultats dans runs/<name>/{log.txt,hist.json}
+3 configs à passer sur 1 GPUs (5)
+[15:33] GPU 5  démarre  SM_big_biased__true_seed_2_32
+[16:26] GPU 5  fini     SM_big_biased__true_seed_2_32
+[16:26] GPU 5  démarre  SM_big_biased__true_seed_1_32
+[17:15] GPU 5  fini     SM_big_biased__true_seed_1_32
+[17:15] GPU 5  démarre  SM_big_biased__true_seed_0_32
+[17:15] GPU 5  reprise  SM_big_biased__true_seed_0_32 (essai 2) --seed 1029947487 --no-compile --force
+[17:15] GPU 5  reprise  SM_big_biased__true_seed_0_32 (essai 3) --seed 811958012 --no-compile --force
+[17:15] GPU 5  ABANDON  SM_big_biased__true_seed_0_32 après 3 essais -> runs/SM_big_biased__true_seed_0_32.crash*.log
+[17:15] GPU 5  file vide, worker terminé
+
+[17:15] terminé. Résultats dans runs/<name>/{log.txt,hist.json}

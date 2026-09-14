@@ -1,0 +1,12 @@
+{
+  "dim": 32,
+  "lr": 1e-3,
+  "iters": 10000,
+  "eval_every": 500,
+  "ckpt": true,
+  "dim-mults": "1,2,4,8",
+  "seed" : 2,
+  "weights" : "0.8, 0.1, 0.1",
+  "name": "SEED 0  SM big data",
+  "npz-dir": "/home/damien/data_fivek_dng/dataset_soomin_final_biased"
+}

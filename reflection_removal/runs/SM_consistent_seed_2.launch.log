@@ -1,0 +1,12 @@
+Traceback (most recent call last):
+  File "/home/damien/ProjectsDL/reflection_removal/train.py", line 286, in <module>
+    main()
+  File "/home/damien/ProjectsDL/reflection_removal/train.py", line 218, in main
+    args = parse_args(argv)
+  File "/home/damien/ProjectsDL/reflection_removal/train.py", line 120, in parse_args
+    for k, v in json.loads(args.cfg.read_text()).items():
+  File "/usr/lib/python3.10/pathlib.py", line 1134, in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors) as f:
+  File "/usr/lib/python3.10/pathlib.py", line 1119, in open
+    return self._accessor.open(self, mode, buffering, encoding, errors,
+FileNotFoundError: [Errno 2] No such file or directory: 'sweep/SM_consistent_seed_2.json'

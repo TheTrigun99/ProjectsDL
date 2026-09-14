@@ -8,7 +8,7 @@
 # (crash à l'import, config invalide) dans runs/<name>.launch.log.
 set -euo pipefail
 
-GPUS=(5)          # les autres tournent pour daehyun / ksi (nvidia-smi)
+GPUS=(3 5 6)          # les autres tournent pour daehyun / ksi (nvidia-smi)
 
 (( $# )) || { echo "usage: $0 sweep/*.json" >&2; exit 1; }
 (( $# <= ${#GPUS[@]} )) || {
