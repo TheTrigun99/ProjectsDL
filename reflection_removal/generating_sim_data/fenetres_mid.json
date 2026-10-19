@@ -1,0 +1,50 @@
+{
+ "b1_raise_x_out|haut": [
+  -0.55,
+  0.82
+ ],
+ "b1_raise_x_out|mid": [
+  -0.59,
+  0.81
+ ],
+ "b2_raise_x_raise|haut": [
+  -1.03,
+  1.49
+ ],
+ "b2_raise_x_raise|mid": [
+  -0.39,
+  1.04
+ ],
+ "b3_raise_x_in|haut": [
+  -2.03,
+  0.64
+ ],
+ "b3_raise_x_in|mid": [
+  -0.46,
+  1.34
+ ],
+ "b4_in_x_raise|haut": [
+  -0.53,
+  1.84
+ ],
+ "b4_in_x_raise|mid": [
+  -0.43,
+  1.36
+ ],
+ "b5_in_x_ibl|haut": [
+  -0.57,
+  1.31
+ ],
+ "b5_in_x_ibl|mid": [
+  -0.2,
+  1.27
+ ],
+ "b6_ibl_x_in|haut": [
+  -0.97,
+  0.6
+ ],
+ "b6_ibl_x_in|mid": [
+  -0.9,
+  1.12
+ ]
+}
